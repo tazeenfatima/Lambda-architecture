@@ -1,0 +1,103 @@
+version: "3.2"
+services:
+ hdfs:
+  image: sequenceiq/hadoop-docker:2.7.0
+  depends_on:
+   - py-mongo
+  networks:
+   - default_bridge
+  volumes:
+   - ./mongo-app:/var/www/html
+ py-mongo:
+  # build the image from Dockerfile
+  build:
+   context: .
+  volumes:
+   - ./mongo-data:/data/db
+   - ./mongo-app:/var/www/html
+  ports:
+   - "27017:27017"
+  environment:
+   - MONGO_INITDB_ROOT_USERNAME=root
+   - MONGO_INITDB_ROOT_PASSWORD=1234
+  networks:
+   - default_bridge
+  image: py_mongo
+ spark-master:
+  container_name: spark-master
+  image: spark
+  build:
+   context: .
+   dockerfile: spark.Dockerfile
+  command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
+  hostname: spark-master
+  environment:
+   MASTER: spark://spark-master:7077
+   SPARK_CONF_DIR: /conf
+   SPARK_PUBLIC_DNS: localhost
+  expose:
+   - 7001
+   - 7002
+   - 7003
+   - 7004
+   - 7005
+   - 7006
+   - 7077
+   - 6066
+  ports:
+   - 4040:4040
+   - 6066:6066
+   - 7077:7077
+   - 8080:8080
+  volumes:
+   - ./services/spark/dependencies:/master/lib
+   - ./services/spark/py-scripts:/master/scripts
+  networks:
+   - default_bridge
+ spark-worker:
+  image: spark
+  container_name: spark-worker
+  command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+  hostname: spark-worker
+  environment:
+   SPARK_CONF_DIR: /conf
+   SPARK_WORKER_CORES: 2
+   SPARK_WORKER_MEMORY: 1g
+   SPARK_WORKER_PORT: 8881
+   SPARK_WORKER_WEBUI_PORT: 8081
+   SPARK_PUBLIC_DNS: localhost
+  expose:
+   - 7012
+   - 7013
+   - 7014
+   - 7015
+   - 7016
+   - 8881
+  ports:
+   - 8081:8081
+  links:
+   - spark-master
+  depends_on:
+   - spark-master
+  networks:
+   - default_bridge 
+ redis:
+  image: redis:latest
+  networks:
+   - default_bridge
+  volumes:
+   - ./mongo-app:/var/www/html
+ datascience-notebook:
+  image: jupyter/datascience-notebook
+  volumes:
+   - /mongo-app:/home/tazeen/jup-notebook
+  ports:
+   - 8888:8888
+  container_name: datascience-notebook-container
+  networks:
+   - default_bridge
+networks:
+  default_bridge:
+    name: tazeen_bridge
+volumes:
+  mongo-app:
