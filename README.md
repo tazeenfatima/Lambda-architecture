@@ -1,2 +1,4 @@
 # Lambda-architecture
-Implemented Lamda architecture with docker compose
+Implemented Lambda architecture with docker compose
+
+Steps for the complete implementation are provided in Lambda Architecture guide.pdf
